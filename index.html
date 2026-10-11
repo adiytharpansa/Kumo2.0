@@ -505,14 +505,17 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
 (function(){
   var tries=0, done=false;
   var GENRE_ID={Action:'Aksi',Adventure:'Petualangan',Comedy:'Komedi',Drama:'Drama',Romance:'Romantis',Fantasy:'Fantasi','Sci-Fi':'Sci-Fi',Mystery:'Misteri',Thriller:'Thriller',Horror:'Horor',Sports:'Olahraga',Music:'Musik',Mecha:'Mecha',Psychological:'Psikologis',Supernatural:'Supranatural','Slice of Life':'Slice of Life'};
-  var FIELDS='id idMal siteUrl status averageScore episodes nextAiringEpisode { episode } startDate { year month day } title { romaji english } genres coverImage { extraLarge large } description(asHtml: false)';
+  var FIELDS='id idMal siteUrl status averageScore episodes nextAiringEpisode { episode } startDate { year month day } title { romaji english native } synonyms genres coverImage { extraLarge large } description(asHtml: false)';
   function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h}
   function toKumo(m){
     var started=(m.startDate&&m.startDate.year)?new Date(m.startDate.year,(m.startDate.month||1)-1,m.startDate.day||1):null;
     var fresh=started&&(Date.now()-started.getTime()<150*864e5);
     var s='Tayang'; if(m.status==='FINISHED')s='Tamat'; if(fresh&&m.status!=='FINISHED')s='Baru';
     var eps=m.episodes||(m.nextAiringEpisode?m.nextAiringEpisode.episode-1:0);
-    return {t:(m.title&&(m.title.english||m.title.romaji))||'Tanpa judul',
+    var alts=[]; function addAlt(x){if(x&&alts.indexOf(x)<0)alts.push(x)}
+    if(m.title){addAlt(m.title.english);addAlt(m.title.romaji);addAlt(m.title.native)}
+    (m.synonyms||[]).forEach(addAlt);
+    return {t:(m.title&&(m.title.english||m.title.romaji))||'Tanpa judul', alts:alts, yr:started?started.getFullYear():null,
       g:(m.genres||[]).map(function(g){return GENRE_ID[g]||g}),
       r:m.averageScore?(m.averageScore/10).toFixed(1):'-', s:s, e:eps,
       d:(m.description||'').replace(/<[^>]*>/g,'').trim(), src:m.siteUrl||'',
@@ -521,7 +524,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
   }
   function apply(results){
     if(!results||!results.length)return false;
-    var items=results.map(function(r,i){return {id:i,t:r.t,g:(r.g&&r.g.length)?r.g:['Anime'],r:r.r,s:r.s,e:r.e||0,d:r.d||'',tot:r.e||0,k:(r.t||'A')[0],h:hue(r.t||'A'),src:r.src||'',img:r.img||'',mal:r.mal||null,aid:r.aid||null}});
+    var items=results.map(function(r,i){return {id:i,t:r.t,alts:r.alts||[],yr:r.yr||null,g:(r.g&&r.g.length)?r.g:['Anime'],r:r.r,s:r.s,e:r.e||0,d:r.d||'',tot:r.e||0,k:(r.t||'A')[0],h:hue(r.t||'A'),src:r.src||'',img:r.img||'',mal:r.mal||null,aid:r.aid||null}});
     try{
       A.splice(0,A.length,...items);
       cont=cont.filter(function(c){return A[c[0]]});
@@ -630,25 +633,108 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
         return fetch('https://kitsu.io/api/edge/mappings/'+d.id+'/item',{headers:H})
           .then(function(r){return r.json()})
           .then(function(j2){return (j2.data&&j2.data.id)||null});
+      })
+      .catch(function(){return null});
+  }
+  function normT(x){
+    return String(x||'').toLowerCase().replace(/[！!？?。・:'’"“”.,\-—_\/()\[\]{}]/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function titleList(a){
+    var out=[]; function add(x){if(x&&out.indexOf(x)<0)out.push(x)}
+    add(a.t); (a.alts||[]).forEach(add); return out;
+  }
+  function searchKitsuByTitle(a,title){
+    var H={Accept:'application/vnd.api+json'};
+    var want=normT(title);
+    return fetch('https://kitsu.io/api/edge/anime?filter%5Btext%5D='+encodeURIComponent(title)+'&page%5Blimit%5D=10',{headers:H})
+      .then(function(r){return r.json()})
+      .then(function(j){
+        var exact=[];
+        (j.data||[]).forEach(function(d){
+          var at=d.attributes||{}, cands=[], ts=at.titles||{}, k;
+          for(k in ts)if(ts[k])cands.push(ts[k]);
+          if(at.canonicalTitle)cands.push(at.canonicalTitle);
+          (at.abbreviatedTitles||[]).forEach(function(x){cands.push(x)});
+          if(at.slug)cands.push(at.slug.replace(/-/g,' '));
+          for(var i=0;i<cands.length;i++)if(normT(cands[i])===want){exact.push(d);break}
+        });
+        if(!exact.length)return null;
+        if(a.yr){
+          for(var i=0;i<exact.length;i++){
+            var sd=(exact[i].attributes&&exact[i].attributes.startDate)||'';
+            if(String(sd).indexOf(String(a.yr))===0)return exact[i].id;
+          }
+        }
+        return exact[0].id;
+      })
+      .catch(function(){return null});
+  }
+  function findKitsuByTitle(a){
+    var titles=titleList(a), chain=Promise.resolve(null);
+    titles.forEach(function(t){
+      chain=chain.then(function(id){return id||searchKitsuByTitle(a,t)});
+    });
+    return chain;
+  }
+  function findKitsuId(a){
+    return findKitsu(a.mal).then(function(id){return id||findKitsuByTitle(a)});
+  }
+  function nyaaUrl(a,ep){
+    var titles=titleList(a);
+    var q=(titles[1]||titles[0]||'')+' '+('0'+ep).slice(-2);
+    return 'https://nyaa.si/?q='+encodeURIComponent(q)+'&c=1_2&f=0';
+  }
+  function nyaaBtn(a,ep){
+    return '<div style="margin-top:9px"><a class="tp-go" target="_blank" rel="noopener" href="'+escT(nyaaUrl(a,ep))+'">Cari magnet di Nyaa</a></div>';
+  }
+  function fetchStreams(url){
+    return fetch(url)
+      .then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json()})
+      .then(function(j){
+        return (j.streams||[]).map(function(s){return {name:s.name||'',title:s.title||'',url:s.url||null,magnet:s.infoHash?('magnet:?xt=urn:btih:'+s.infoHash):null}});
       });
+  }
+  function fetchFirst(urls){
+    var lastErr=null;
+    var chain=Promise.resolve(null);
+    urls.forEach(function(u){
+      chain=chain.then(function(found){
+        if(found&&found.length)return found;
+        return fetchStreams(u).catch(function(e){lastErr=e;return []});
+      });
+    });
+    return chain.then(function(found){
+      if(found&&found.length)return found;
+      if(lastErr)throw lastErr;
+      return [];
+    });
   }
   function load(id,ep){
     var a=A[id]; if(!a||!a.mal)return;
     var key=id+':'+ep; if(key===closedKey)return;
     if(key===lastKey&&document.getElementById('tspanel'))return; lastKey=key;
     panel(head(a,ep)+'<div>Memuat sumber dari Torrentio\u2026</div>'); wireRd(id,ep);
-    findKitsu(a.mal).then(function(kid){
+    findKitsuId(a).then(function(kid){
       if(lastKey!==key)return null;
-      if(!kid){panel(head(a,ep)+'<div>Anime ini belum terpetakan di Kitsu, jadi sumber streamingnya tidak bisa dicari.</div>');wireRd(id,ep);return null}
+      if(!kid){
+        panel(head(a,ep)+'<div>Pemetaan Kitsu untuk anime ini belum ada. Pakai jalur cadangan Nyaa di bawah ini, lalu ketuk magnetnya dan pilih Stremio.</div>'+nyaaBtn(a,ep));
+        wireRd(id,ep); return null;
+      }
       var cfg='providers=nyaasi,horriblesubs,anidex|sort=seeders|qualityfilter=720p,1080p';
       var rd=rdKey(); if(rd)cfg+='|realdebrid='+encodeURIComponent(rd);
       var enc=cfg.split('|').join('%7C');
-      return fetch('https://torrentio.strem.fun/'+enc+'/stream/anime/kitsu:'+kid+':'+ep+'.json')
-        .then(function(r){return r.json()})
-        .then(function(j){
+      var urls=[
+        'https://torrentio.strem.fun/'+enc+'/stream/anime/kitsu:'+kid+':'+ep+'.json',
+        'https://torrentio.strem.fun/'+enc+'/stream/series/kitsu:'+kid+':'+ep+'.json',
+        'https://torrentio.strem.fun/stream/anime/kitsu:'+kid+':'+ep+'.json',
+        'https://torrentio.strem.fun/stream/series/kitsu:'+kid+':'+ep+'.json'
+      ];
+      return fetchFirst(urls).then(function(streams){
           if(lastKey!==key)return;
-          var streams=(j.streams||[]).map(function(s){return {name:s.name||'',title:s.title||'',url:s.url||null,magnet:s.infoHash?('magnet:?xt=urn:btih:'+s.infoHash):null}});
-          if(!streams.length){panel(head(a,ep)+'<div>Belum ada sumber untuk episode ini.</div>');wireRd(id,ep);return}
+          if(!streams.length){
+            panel(head(a,ep)+'<div>Torrentio belum menyediakan sumber untuk episode ini. Pakai jalur cadangan Nyaa di bawah ini.</div>'+nyaaBtn(a,ep));
+            wireRd(id,ep); return;
+          }
           var rows=streams.slice(0,12).map(function(sm){
             var lines=(sm.title||'').split('\n');
             var meta=lines.slice(1).join(' ').trim();
@@ -665,7 +751,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
         panel(head(a,ep)+'<div>Sumber lambat merespons, mencoba lagi\u2026</div>'); wireRd(id,ep);
         setTimeout(function(){ if(lastKey===key){lastKey=''; load(id,ep);} },3000);
       }else{
-        panel(head(a,ep)+'<div>Sumber video tidak terjangkau. Periksa koneksi internet lalu coba lagi.</div>'); wireRd(id,ep);
+        panel(head(a,ep)+'<div>Sumber video tidak terjangkau. Periksa koneksi internet lalu coba lagi, atau pakai jalur cadangan Nyaa.</div>'+nyaaBtn(a,ep)); wireRd(id,ep);
       }
     });
   }
