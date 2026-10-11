@@ -598,11 +598,76 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
   function head(a,ep){
     return '<h4><span>Sumber video \u00b7 '+escT(a.t)+' Ep '+ep+'</span><button class="tp-x" aria-label="Tutup">\u2715</button></h4>'
       +'<input id="tp-rd" type="password" placeholder="API key Real-Debrid (opsional, tersimpan di perangkat ini)" value="'+escT(rdKey())+'">'
-      +'<div style="opacity:.75;font-size:11.5px;margin-bottom:4px">Gratis: ketuk <b>Magnet</b> lalu pilih <b>Stremio</b> untuk memutar. Dengan Real-Debrid: tombol Putar langsung di sini.</div>';
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 3px">'
+      +'<button class="tp-go" data-srv="videasy">▶ Server 1 · Videasy</button>'
+      +'<button class="tp-go" data-srv="vidlux">▶ Server 2 · VidLux</button>'
+      +'<button class="tp-go" data-srv="vidfast">▶ Server 3 · VidFast</button>'
+      +'</div>'
+      +'<div style="opacity:.75;font-size:11.5px;margin-bottom:4px">Putar langsung di halaman: coba Server 1, bila gagal ganti server. Gratis via torrent: ketuk <b>Magnet</b> lalu pilih <b>Stremio</b>. Dengan Real-Debrid: tombol Putar di daftar torrent.</div>';
   }
   function wireRd(id,ep){
-    var inp=document.getElementById('tp-rd'); if(!inp)return;
-    inp.onchange=function(){try{localStorage.setItem('kumoRD',inp.value.trim())}catch(e){} lastKey=''; load(id,ep);};
+    var inp=document.getElementById('tp-rd');
+    if(inp)inp.onchange=function(){try{localStorage.setItem('kumoRD',inp.value.trim())}catch(e){} lastKey=''; load(id,ep);};
+    wireServers(id,ep);
+  }
+  function playEmbed(url,label){
+    var pl=document.getElementById('pl'); if(!pl)return;
+    var old=document.getElementById('tpvwrap'); if(old)old.remove();
+    var p=document.getElementById('tspanel'); if(p)p.remove();
+    var w=document.createElement('div'); w.id='tpvwrap';
+    w.innerHTML='<div class="tpv-bar"><span>Sedang diputar \u00b7 '+escT(label)+'</span><button class="tpv-x">\u2715 Tutup video</button></div>';
+    var f=document.createElement('iframe');
+    f.src=url;
+    f.setAttribute('allowfullscreen','');
+    f.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
+    f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-presentation');
+    f.style.cssText='flex:1;width:100%;min-height:0;border:0;background:#000';
+    w.appendChild(f); pl.appendChild(w);
+    w.querySelector('.tpv-x').onclick=function(){ w.remove(); };
+  }
+  var anizipCache={};
+  function resolveAnizip(a){
+    if(!a||!a.aid)return Promise.resolve(null);
+    if(anizipCache[a.aid])return Promise.resolve(anizipCache[a.aid]);
+    return fetch('https://api.ani.zip/mappings?anilist_id='+a.aid)
+      .then(function(r){return r.json()})
+      .then(function(j){anizipCache[a.aid]=j;return j})
+      .catch(function(){return null});
+  }
+  function seasonEp(j,ep){
+    var e=j&&j.episodes&&j.episodes[String(ep)];
+    if(e&&e.seasonNumber&&e.episodeNumber)return [e.seasonNumber,e.episodeNumber];
+    return [1,ep];
+  }
+  function srvNote(msg){
+    if(typeof toast==='function'){try{toast(msg);return}catch(e){}}
+  }
+  function openServer(a,ep,srv,btn){
+    if(srv==='videasy'){
+      if(a.aid)playEmbed('https://player.videasy.to/anime/'+a.aid+'/'+ep,'Server 1 \u00b7 Videasy');
+      else srvNote('ID AniList anime ini tidak ada');
+      return;
+    }
+    var old=btn?btn.textContent:'';
+    if(btn)btn.textContent='Menyiapkan\u2026';
+    resolveAnizip(a).then(function(j){
+      if(btn)btn.textContent=old;
+      var m=(j&&j.mappings)||{}, se=seasonEp(j,ep);
+      if(srv==='vidlux'){
+        if(m.themoviedb_id)playEmbed('https://vidlux.xyz/embed/tv/'+m.themoviedb_id+'/'+se[0]+'/'+se[1],'Server 2 \u00b7 VidLux');
+        else srvNote('Server 2 tidak punya anime ini, coba server lain');
+      }else if(srv==='vidfast'){
+        if(m.imdb_id)playEmbed('https://vidfast.vc/tv/'+m.imdb_id+'/'+se[0]+'/'+se[1],'Server 3 \u00b7 VidFast');
+        else srvNote('Server 3 tidak punya anime ini, coba server lain');
+      }
+    });
+  }
+  function wireServers(id,ep){
+    var a=A[id]; if(!a)return;
+    var btns=document.querySelectorAll('#tspanel [data-srv]');
+    for(var i=0;i<btns.length;i++){
+      btns[i].onclick=function(){ openServer(a,ep,this.getAttribute('data-srv'),this); };
+    }
   }
   function playVideo(url){
     var pl=document.getElementById('pl'); if(!pl)return;
@@ -722,10 +787,14 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
     });
   }
   function load(id,ep){
-    var a=A[id]; if(!a||!a.mal)return;
+    var a=A[id]; if(!a||(!a.mal&&!a.aid))return;
     var key=id+':'+ep; if(key===closedKey)return;
     if(key===lastKey&&document.getElementById('tspanel'))return; lastKey=key;
     panel(head(a,ep)+'<div>Memuat sumber dari Torrentio\u2026</div>'); wireRd(id,ep);
+    if(!a.mal){
+      panel(head(a,ep)+'<div>Anime ini tidak punya ID MyAnimeList, jadi sumber torrent tidak bisa dicari. Pakai Server putar langsung di atas, atau jalur Nyaa.</div>'+nyaaBtn(a,ep));
+      wireRd(id,ep); return;
+    }
     findKitsuId(a).then(function(kid){
       if(lastKey!==key)return null;
       if(!kid){
@@ -784,7 +853,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
       }
       if(typeof P!=='undefined'&&P&&pl&&pl.classList.contains('open')){
         if(document.getElementById('tpvwrap'))return;
-        var a=A[P.id]; if(a&&a.mal)load(P.id,P.ep);
+        var a=A[P.id]; if(a&&(a.mal||a.aid))load(P.id,P.ep);
       }
     }catch(e){}
   },900);
