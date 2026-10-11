@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d0b1a">
+<meta name="theme-color" content="#0a0a0d">
 <title>Kumo – Nonton Anime</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -266,6 +266,45 @@ nav button:not(.on):active span{background:var(--sf2)}
 }
 .bgs .nw{background:var(--gr)}
 </style>
+<style id="anibay-skin">
+/* Skin gaya AniBay untuk Kumo 2.0: tema gelap pekat + aksen oranye,
+   hero Spotlight rata kiri dengan label dan titik indikator,
+   tombol putar bulat oranye di halaman detail. */
+:root{
+  --bg:#0a0a0d;--sf:#16161b;--sf2:#232329;--tx:#f5f5f7;--mu:#9c9ca6;--ln:#26262d;
+  --ac:#ff7a1a;--ac2:#ffa53d;--gr:linear-gradient(135deg,#ff7a1a,#ff8f3d);
+  --glass:rgba(13,13,17,.85);--sh:0 10px 30px -12px rgba(0,0,0,.75);--sh2:0 24px 60px -20px rgba(0,0,0,.85);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#0a0a0d;--sf:#16161b;--sf2:#232329;--tx:#f5f5f7;--mu:#9c9ca6;--ln:#26262d;
+  --ac:#ff7a1a;--ac2:#ffa53d;--gr:linear-gradient(135deg,#ff7a1a,#ff8f3d);
+  --glass:rgba(13,13,17,.85);--sh:0 10px 30px -12px rgba(0,0,0,.75);--sh2:0 24px 60px -20px rgba(0,0,0,.85);
+  color-scheme:dark;
+}
+body:before{background:radial-gradient(520px 340px at 85% -5%,rgba(255,122,26,.10),transparent 70%),radial-gradient(460px 320px at -10% 8%,rgba(255,122,26,.07),transparent 70%)}
+/* Hero Spotlight rata kiri */
+.hero{align-items:flex-start;text-align:left}
+.hero h1{text-align:left}
+.hero h1:before{content:"SPOTLIGHT";display:block;font-family:var(--bd);font-size:12px;font-weight:700;letter-spacing:3.5px;color:var(--ac);margin-bottom:12px;text-shadow:none}
+.bgs,.hmeta{justify-content:flex-start}
+.hgen{text-align:left}
+.hact{margin:0;justify-content:flex-start}
+.hero .btn.pri{background:var(--gr);color:#fff;box-shadow:0 12px 26px -10px rgba(255,122,26,.65)}
+/* Titik indikator ala AniBay */
+.seg{max-width:none;justify-content:center;gap:7px;padding:0 18px}
+.seg i{flex:0 0 7px;height:7px;border-radius:99px;background:#33333b;overflow:hidden}
+.seg i.on{flex-basis:24px;background:var(--ac)}
+.seg i.on:after{display:none}
+/* Navigasi bawah: aktif oranye tanpa pil */
+nav .on span{background:transparent}
+/* Detail: tombol putar bulat oranye besar */
+.bd .row .btn.go{flex:0 0 64px;width:64px;height:64px;padding:0;border-radius:50%;font-size:0;gap:0;align-self:center;box-shadow:0 14px 30px -10px rgba(255,122,26,.7)}
+.bd .row .btn.go svg{width:26px;height:26px}
+.bd .row .btn[data-sh]{border-radius:50%;height:52px;align-self:center}
+/* Pemutar simulasi: tombol tengah oranye */
+.pm .big{background:var(--ac);color:#fff}
+</style>
 </head>
 <body>
 <div class="top" id="top"></div>
@@ -494,8 +533,7 @@ plE.addEventListener("touchstart",e=>{if(!P||P.lock||P.mini||e.target.closest("b
 plE.addEventListener("touchmove",e=>{if(!gs)return;const t=e.touches[0],dy=t.clientY-gs.y,dx=t.clientX-gs.x;if(!gs.m&&Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)){gs.m=1;clearTimeout(lpT)}if(gs.m){const v=Math.min(1,Math.max(gs.v=="br"?.2:0,gs.s-dy/260));S[gs.v]=v;$p("bo").style.opacity=1-S.br;gi((gs.v=="br"?"Kecerahan ":"Volume ")+Math.round(v*100)+"%")}},{passive:true});
 plE.addEventListener("touchend",()=>{clearTimeout(lpT);if(!gs)return;const u=gs.m||lpOn;if(lpOn){P.sp=P.sp0;lpOn=0;gi("")}if(u){gd=1;setTimeout(()=>gd=0,350);sv()}gs=null});
 setInterval(()=>{if(tab=="home"&&!P&&!$("#sh").classList.contains("open")){hi=(hi+1)%3;heroSwap()}},6000);
-applyTheme();render();setTimeout(()=>{loading=false;render()},650);
-</script>
+applyTheme();render();setTimeout(()=>{loading=false;render()},650);</script>
 
 <script>
 
