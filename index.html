@@ -561,7 +561,11 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
   +'#tspanel .tp-row{display:flex;gap:8px;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.1)}'
   +'#tspanel .tp-row>div{flex:1;min-width:0}#tspanel .tp-row b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}'
   +'#tspanel .tp-row small{opacity:.75;font-size:11.5px}'
-  +'#tspanel a.tp-go{flex:none;background:#fff;color:#16132e;font-weight:700;text-decoration:none;padding:6px 12px;border-radius:99px;font-size:12px}'
+  +'#tspanel .tp-go{flex:none;background:#fff;color:#16132e;font-weight:700;text-decoration:none;padding:6px 12px;border-radius:99px;font-size:12px;border:0;cursor:pointer;font-family:inherit}'
+  +'#tpvwrap{position:absolute;inset:0;z-index:8;background:#000;display:flex;flex-direction:column}'
+  +'#tpvwrap .tpv-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;color:#fff;font-size:13px;font-weight:700}'
+  +'#tpvwrap .tpv-x{background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:99px;padding:6px 14px;cursor:pointer;font-family:inherit}'
+  +'#tpvwrap video{flex:1;width:100%;min-height:0;background:#000}';
   +'#tspanel input{width:100%;margin:6px 0 4px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:12px;box-sizing:border-box}';
   var st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
   function rdKey(){try{return localStorage.getItem('kumoRD')||''}catch(e){return ''}}
@@ -582,6 +586,24 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
   function wireRd(id,ep){
     var inp=document.getElementById('tp-rd'); if(!inp)return;
     inp.onchange=function(){try{localStorage.setItem('kumoRD',inp.value.trim())}catch(e){} lastKey=''; load(id,ep);};
+  }
+  function playVideo(url){
+    var pl=document.getElementById('pl'); if(!pl)return;
+    var old=document.getElementById('tpvwrap'); if(old)old.remove();
+    var p=document.getElementById('tspanel'); if(p)p.remove();
+    var w=document.createElement('div'); w.id='tpvwrap';
+    w.innerHTML='<div class="tpv-bar"><span>Sedang diputar</span><button class="tpv-x">✕ Tutup video</button></div>';
+    var v=document.createElement('video');
+    v.setAttribute('controls',''); v.setAttribute('autoplay',''); v.setAttribute('playsinline','');
+    v.src=url;
+    w.appendChild(v); pl.appendChild(w);
+    w.querySelector('.tpv-x').onclick=function(){ try{v.pause()}catch(e){} w.remove(); };
+  }
+  function wirePlay(){
+    var btns=document.querySelectorAll('#tspanel [data-tpurl]');
+    for(var i=0;i<btns.length;i++){
+      btns[i].onclick=function(){ playVideo(this.getAttribute('data-tpurl')); };
+    }
   }
   function findKitsu(mal){
     var H={Accept:'application/vnd.api+json'};
@@ -616,11 +638,11 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
           var rows=streams.slice(0,12).map(function(sm){
             var lines=(sm.title||'').split('\n');
             var meta=lines.slice(1).join(' ').trim();
-            var go=sm.url?'<a class="tp-go" href="'+escT(sm.url)+'" target="_blank" rel="noopener">\u25b6 Putar</a>'
+            var go=sm.url?'<button class="tp-go" data-tpurl="'+escT(sm.url)+'">\u25b6 Putar</button>'
                          :(sm.magnet?'<a class="tp-go" href="'+escT(sm.magnet)+'">\ud83e\uddf2 Magnet</a>':'');
             return '<div class="tp-row"><div><b>'+escT((sm.name||'Torrentio').replace(/\n/g,' '))+' \u00b7 '+escT(lines[0]||'')+'</b><small>'+escT(meta)+'</small></div>'+go+'</div>';
           }).join('');
-          panel(head(a,ep)+rows); wireRd(id,ep);
+          panel(head(a,ep)+rows); wireRd(id,ep); wirePlay();
         });
     }).catch(function(){ if(lastKey===key){panel(head(a,ep)+'<div>Sumber video tidak terjangkau. Periksa koneksi internet lalu coba lagi.</div>');wireRd(id,ep);} });
   }
@@ -631,7 +653,11 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
   setInterval(function(){
     try{
       var pl=document.getElementById('pl');
+      if(pl&&!pl.classList.contains('open')){
+        var w=document.getElementById('tpvwrap'); if(w)w.remove();
+      }
       if(typeof P!=='undefined'&&P&&pl&&pl.classList.contains('open')){
+        if(document.getElementById('tpvwrap'))return;
         var a=A[P.id]; if(a&&a.mal)load(P.id,P.ep);
       }
     }catch(e){}
