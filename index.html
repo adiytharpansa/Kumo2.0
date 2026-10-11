@@ -304,6 +304,27 @@ nav .on span{background:transparent}
 .bd .row .btn[data-sh]{border-radius:50%;height:52px;align-self:center}
 /* Pemutar simulasi: tombol tengah oranye */
 .pm .big{background:var(--ac);color:#fff}
+/* Header: ukuran ikon lonceng & cari */
+.top .ib svg{width:20px;height:20px}
+/* Kartu Rankings di beranda */
+.rk{display:flex;align-items:center;gap:14px;width:calc(100% - 36px);margin:18px 18px 0;padding:16px;background:var(--sf);border:1px solid var(--ln);border-radius:20px;text-align:left;box-shadow:var(--sh);color:var(--tx);font:inherit;cursor:pointer}
+.rki{width:52px;height:52px;flex:none;display:grid;place-items:center;font-size:24px;background:rgba(255,122,26,.16);border:1px solid rgba(255,122,26,.45);border-radius:16px}
+.rkt{flex:1;min-width:0}
+.rkt b{font-size:19px;display:flex;gap:8px;align-items:center;font-family:var(--hd)}
+.rkt b i{font-style:normal;font-family:var(--bd);font-size:11px;font-weight:700;color:var(--ac);background:rgba(255,122,26,.16);padding:3px 9px;border-radius:99px}
+.rkt small{display:block;color:var(--mu);font-size:12.5px;margin-top:3px;font-weight:500}
+.rkc{font-size:26px;color:var(--mu);flex:none}
+@media (min-width:760px){.rk{margin:18px 32px 0;width:calc(100% - 64px)}}
+/* Detail: poster kecil + info di banner */
+.ph{height:250px}
+.phrow{position:relative;z-index:1;display:flex;gap:14px;align-items:flex-end;width:100%}
+.php{width:104px;aspect-ratio:2/3;border-radius:14px;background:var(--g);flex:none;box-shadow:0 14px 30px -10px rgba(0,0,0,.7)}
+.phi{min-width:0}
+.phi h3{color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.phi .chp2{margin-top:10px}
+.phi .chp2 span{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.22)}
+/* Tautan luar & trailer di detail */
+.chp2 a{background:var(--sf2);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--mu);text-decoration:none}
 </style>
 </head>
 <body>
@@ -363,6 +384,7 @@ let mood="Seru";
 const moodHTML=()=>`<h2>Lagi mood apa?</h2><div class="chips" style="margin-bottom:14px">${Object.keys(MD).map(k=>`<button class="chip ${k==mood?"on":""}" data-md="${k}">${k}</button>`).join("")}</div><div class="sc lg">${A.filter(a=>a.g.some(g=>MD[mood].includes(g))).map(pc).join("")}</div>`;
 function home(){if(loading)return `<div class="hero sk"></div><div class="sc" style="margin-top:28px">${'<div class="c"><div class="poster sk"></div></div>'.repeat(4)}</div>`;
 return heroHTML()+segHTML()+`
+<button class="rk" data-rk="1"><span class="rki">🏆</span><span class="rkt"><b>Rankings <i>Top 10</i></b><small>Peringkat hari ini, minggu ini, dan bulan ini</small></span><span class="rkc">›</span></button>
 <h2>Lanjutkan menonton</h2><div class="sc">${cont.map(([id,ep,p])=>{const a=A[id];return `<div class="cw"><button class="th" style="--g:${grad(a)}" data-p="${id}" data-e="${ep}" data-r="${p}" aria-label="Putar ${a.t}"></button><div class="t" style="font-weight:700;margin-top:8px;font-family:var(--hd)">${a.t}</div><small>Episode ${ep} · sisa ${Math.round(24*(1-p))} mnt</small><div class="bar"><i style="width:${p*100}%"></i></div></div>`}).join("")}</div>
 ${newSec()}<h2>Spotlight</h2><div class="sc lg">${[...A].sort((x,y)=>y.r-x.r).slice(0,8).map(pc).join("")}</div>
 <h2>Trending</h2><div class="sc lg">${[...A].sort((x,y)=>y.e-x.e).slice(0,8).map(pc).join("")}</div>
@@ -417,7 +439,7 @@ function drawer(){const a=A[P.id],d=$p("dr");d.innerHTML=`<div class="dh"><b>Epi
 function gi(m){const g=$p("gi");g.textContent=m;g.hidden=!m;clearTimeout(gi.t);if(m)gi.t=setTimeout(()=>g.hidden=true,900)}
 setInterval(()=>{let c=0,f=0;for(const k in D){const x=D[k];if(x.s=="dl"){c=1;x.p=Math.min(100,x.p+3+Math.random()*5);if(x.p>=100){x.s="ok";f=1;const[i,e]=k.split(":");toast(A[i].t+" Ep "+e+" selesai diunduh")}}}if(c){syncDl();if(f){sv();if(tab=="profil")render()}}},500);
 const V={home,genre,latest,search,list:mylist,profil};
-function render(){document.body.classList.toggle("hm",tab=="home");$("#top").innerHTML=`<div class="logo">kumo<i>.</i></div><div style="display:flex;gap:8px"><button class="ib avb" data-t="profil" aria-label="Profil">${esc((T.name[0]||"K").toUpperCase())}</button></div>`;$("#v").innerHTML=V[tab]();
+function render(){document.body.classList.toggle("hm",tab=="home");$("#top").innerHTML=`<div class="logo">kumo<i>.</i></div><div style="display:flex;gap:8px"><button class="ib" data-t="latest" aria-label="Anime baru" style="position:relative">${BELL}${newest().length?`<span style="position:absolute;top:-4px;right:-4px;background:var(--ac);color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:99px;display:grid;place-items:center;padding:0 4px">${newest().length}</span>`:""}</button><button class="ib" data-t="search" aria-label="Cari">${ic('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>')}</button><button class="ib avb" data-t="profil" aria-label="Profil">${esc((T.name[0]||"K").toUpperCase())}</button></div>`;$("#v").innerHTML=V[tab]();
 $("#nav").innerHTML=tabs.map(t=>`<button class="${t[0]==tab?"on":""}" data-t="${t[0]}"><span>${t[1]}</span>${t[2]}</button>`).join("");
 const nm=$("#nm");if(nm)nm.oninput=e=>{T.name=e.target.value;sv();const v=$(".avb"),p=$(".av");if(v)v.textContent=(T.name[0]||"K").toUpperCase();if(p)p.textContent=(T.name[0]||"K").toUpperCase()};if(sOpen&&$("#sh").classList.contains("open"))settings();const qi=$("#qi");if(qi){qi.oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render();const n=$("#qi");n.focus();n.setSelectionRange(p,p)}}}
 let hs=0,skp=0;
@@ -441,10 +463,11 @@ const stHTML=id=>`<div class="chips" style="padding:0 0 14px;flex-wrap:nowrap;ov
 const rateHTML=id=>`<div class="rate"><span>Nilaimu</span><div>${[1,2,3,4,5].map(n=>`<button class="${n<=(RT[id]||0)?"on":""}" data-rt="${n}" data-id="${id}" aria-label="${n} bintang">★</button>`).join("")}</div></div>`;
 const reopen=i=>{const y=$("#pn").scrollTop;open(i);$("#pn").scrollTop=y};
 function open(id,t){sOpen=0;cur=id;dtab=t??dtab;const a=A[id],n=Math.min(a.e,8),sim=A.filter(x=>x.id!=id&&x.g.some(g=>a.g.includes(g))).slice(0,6);
-$("#pn").innerHTML=`<div class="gr"></div><div class="ph" style="--g:${grad(a)}"><button class="x" data-c aria-label="Tutup">✕</button><h3>${a.t}</h3></div><div class="bd"><div class="stt"><div><b>★ ${a.r}</b><span>Rating</span></div><div><b>${a.tot}</b><span>Episode</span></div><div><b>${a.s}</b><span>Status</span></div></div><div class="chp2">${a.g.map(g=>`<span>${g}</span>`).join("")}</div><p>${a.d}</p>${list.has(id)?stHTML(id):""}<div class="row"><button class="btn go" data-p="${a.id}">${PLY} ${H.some(h=>h[0]==a.id)?"Lanjutkan":"Tonton"}</button><button class="btn ol" data-l="${a.id}">${hrt(list.has(a.id))} ${list.has(a.id)?"Di daftar":"Daftarku"}</button><button class="btn ol" data-sh="${a.id}" aria-label="Bagikan">${SHR}</button></div>${rateHTML(id)}<div class="tb"><button class="${dtab?"":"on"}" data-dt="0" data-id="${id}">Episode</button><button class="${dtab?"on":""}" data-dt="1" data-id="${id}">Mirip</button></div>${dtab?`<div class="grid" style="padding:0">${sim.map(card).join("")}</div>`:Array.from({length:n},(_,i)=>`<div class="epl"><button class="th" data-p="${a.id}" data-e="${a.e-i}" style="--g:${grad(a)};filter:hue-rotate(${i*25}deg)" aria-label="Putar episode ${a.e-i}"></button><button class="eb" data-p="${a.id}" data-e="${a.e-i}"><b>Episode ${a.e-i}</b><span>24 mnt</span></button>${dlBtn(a.id,a.e-i)}</div>`).join("")}</div>`;
+$("#pn").innerHTML=`<div class="gr"></div><div class="ph" style="--g:${grad(a)}"><button class="x" data-c aria-label="Tutup">✕</button><div class="phrow"><div class="php" style="--g:${grad(a)}"></div><div class="phi"><h3>${a.t}</h3><div class="chp2"><span>TV</span>${a.yr?`<span>${a.yr}</span>`:""}<span>24 mnt</span><span>★ ${a.r}</span></div></div></div></div><div class="bd"><div class="stt"><div><b>★ ${a.r}</b><span>Rating</span></div><div><b>${a.tot}</b><span>Episode</span></div><div><b>${a.s}</b><span>Status</span></div></div><div class="chp2">${a.g.map(g=>`<span>${g}</span>`).join("")}</div><p>${a.d}</p>${(a.src||a.mal||a.tr)?`<div class="chp2" style="margin-top:0">${a.tr?`<a href="https://www.youtube.com/watch?v=${a.tr}" target="_blank" rel="noopener">▶ Trailer</a>`:""}${a.src?`<a href="${a.src}" target="_blank" rel="noopener">AniList</a>`:""}${a.mal?`<a href="https://myanimelist.net/anime/${a.mal}" target="_blank" rel="noopener">MyAnimeList</a>`:""}</div>`:""}${list.has(id)?stHTML(id):""}<div class="row"><button class="btn go" data-p="${a.id}">${PLY} ${H.some(h=>h[0]==a.id)?"Lanjutkan":"Tonton"}</button><button class="btn ol" data-l="${a.id}">${hrt(list.has(a.id))} ${list.has(a.id)?"Di daftar":"Daftarku"}</button><button class="btn ol" data-sh="${a.id}" aria-label="Bagikan">${SHR}</button></div>${rateHTML(id)}<div class="tb"><button class="${dtab?"":"on"}" data-dt="0" data-id="${id}">Episode</button><button class="${dtab?"on":""}" data-dt="1" data-id="${id}">Mirip</button></div>${dtab?`<div class="grid" style="padding:0">${sim.map(card).join("")}</div>`:Array.from({length:n},(_,i)=>`<div class="epl"><button class="th" data-p="${a.id}" data-e="${a.e-i}" style="--g:${grad(a)};filter:hue-rotate(${i*25}deg)" aria-label="Putar episode ${a.e-i}"></button><button class="eb" data-p="${a.id}" data-e="${a.e-i}"><b>Episode ${a.e-i}</b><span>24 mnt</span></button>${dlBtn(a.id,a.e-i)}</div>`).join("")}</div>`;
 if(!$("#sh").classList.contains("open"))hPush();$("#sh").classList.add("open")}
 document.addEventListener("click",e=>{const b=e.target.closest("button,.sheet");if(!b)return;const d=b.dataset;
 if(d.t){tab=d.t;scrollTo(0,0);render()}
+else if(d.rk!==undefined){tab="genre";gf=null;so=0;scrollTo(0,0);render()}
 else if(d.g!==undefined){gf=gf==d.g?null:d.g;render()}
 else if(d.dy!==undefined){dy=+d.dy;render()}
 else if(d.so!==undefined){so=+d.so;render()}
@@ -543,7 +566,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);</script>
 (function(){
   var tries=0, done=false;
   var GENRE_ID={Action:'Aksi',Adventure:'Petualangan',Comedy:'Komedi',Drama:'Drama',Romance:'Romantis',Fantasy:'Fantasi','Sci-Fi':'Sci-Fi',Mystery:'Misteri',Thriller:'Thriller',Horror:'Horor',Sports:'Olahraga',Music:'Musik',Mecha:'Mecha',Psychological:'Psikologis',Supernatural:'Supranatural','Slice of Life':'Slice of Life'};
-  var FIELDS='id idMal siteUrl status averageScore episodes nextAiringEpisode { episode } startDate { year month day } title { romaji english native } synonyms genres coverImage { extraLarge large } description(asHtml: false)';
+  var FIELDS='id idMal siteUrl status averageScore episodes nextAiringEpisode { episode } startDate { year month day } title { romaji english native } synonyms genres coverImage { extraLarge large } trailer { id site } description(asHtml: false)';
   function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h}
   function toKumo(m){
     var started=(m.startDate&&m.startDate.year)?new Date(m.startDate.year,(m.startDate.month||1)-1,m.startDate.day||1):null;
@@ -553,7 +576,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);</script>
     var alts=[]; function addAlt(x){if(x&&alts.indexOf(x)<0)alts.push(x)}
     if(m.title){addAlt(m.title.english);addAlt(m.title.romaji);addAlt(m.title.native)}
     (m.synonyms||[]).forEach(addAlt);
-    return {t:(m.title&&(m.title.english||m.title.romaji))||'Tanpa judul', alts:alts, yr:started?started.getFullYear():null,
+    return {t:(m.title&&(m.title.english||m.title.romaji))||'Tanpa judul', alts:alts, yr:started?started.getFullYear():null, tr:(m.trailer&&m.trailer.site==='youtube')?m.trailer.id:null,
       g:(m.genres||[]).map(function(g){return GENRE_ID[g]||g}),
       r:m.averageScore?(m.averageScore/10).toFixed(1):'-', s:s, e:eps,
       d:(m.description||'').replace(/<[^>]*>/g,'').trim(), src:m.siteUrl||'',
@@ -562,7 +585,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);</script>
   }
   function apply(results){
     if(!results||!results.length)return false;
-    var items=results.map(function(r,i){return {id:i,t:r.t,alts:r.alts||[],yr:r.yr||null,g:(r.g&&r.g.length)?r.g:['Anime'],r:r.r,s:r.s,e:r.e||0,d:r.d||'',tot:r.e||0,k:(r.t||'A')[0],h:hue(r.t||'A'),src:r.src||'',img:r.img||'',mal:r.mal||null,aid:r.aid||null}});
+    var items=results.map(function(r,i){return {id:i,t:r.t,alts:r.alts||[],yr:r.yr||null,tr:r.tr||null,g:(r.g&&r.g.length)?r.g:['Anime'],r:r.r,s:r.s,e:r.e||0,d:r.d||'',tot:r.e||0,k:(r.t||'A')[0],h:hue(r.t||'A'),src:r.src||'',img:r.img||'',mal:r.mal||null,aid:r.aid||null}});
     try{
       A.splice(0,A.length,...items);
       cont=cont.filter(function(c){return A[c[0]]});
@@ -660,8 +683,28 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);</script>
     f.setAttribute('allowfullscreen','');
     f.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');
     f.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-presentation');
-    f.style.cssText='flex:1;width:100%;min-height:0;border:0;background:#000';
-    w.appendChild(f); pl.appendChild(w);
+    f.style.cssText='width:100%;aspect-ratio:16/9;flex:none;border:0;background:#000';
+    w.appendChild(f);
+    var a=A[id], total=a?((a.e||a.tot||ep)):ep;
+    var info=document.createElement('div');
+    info.style.cssText='flex:1;overflow-y:auto;padding:14px 16px 20px;color:#fff';
+    var start=1,end=total;
+    if(total>100){start=Math.max(1,Math.min(ep-20,total-99));end=Math.min(total,start+99)}
+    var chips='';
+    for(var n=start;n<=end;n++){
+      chips+='<button data-pep="'+n+'" style="min-width:52px;padding:10px 0;border-radius:12px;background:'+(n===ep?'#ff7a1a':'rgba(255,255,255,.08)')+';border:1px solid '+(n===ep?'transparent':'rgba(255,255,255,.14)')+';color:#fff;font-weight:700;font-family:inherit;cursor:pointer">'+n+'</button>';
+    }
+    info.innerHTML='<div style="font-family:var(--hd);font-weight:800;font-size:19px">'+escT(a?a.t:'')+'</div>'
+      +'<div style="color:#ff7a1a;font-weight:700;font-size:12px;letter-spacing:.4px;margin:7px 0 2px">SEDANG DIPUTAR</div>'
+      +'<div style="opacity:.85;font-size:13.5px;margin-bottom:14px">Episode '+ep+' \u00b7 '+escT(label)+'</div>'
+      +'<div style="font-weight:800;font-size:16px;margin-bottom:8px">Episode</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px">'+chips+'</div>'
+      +(total>100?'<div style="opacity:.6;font-size:12px;margin-top:10px">Menampilkan 100 episode di sekitar episode ini. Untuk loncat jauh, tutup video lalu pilih episode dari halaman detail.</div>':'');
+    w.appendChild(info); pl.appendChild(w);
+    var pbtns=info.querySelectorAll('[data-pep]');
+    for(var pi=0;pi<pbtns.length;pi++){
+      pbtns[pi].onclick=function(){ var nn=+this.getAttribute('data-pep'); if(window.play)window.play(id,nn); };
+    }
     var btns=w.querySelectorAll('.tpv-x');
     if(btns&&btns[0])btns[0].onclick=function(){ var c=embedCtx; embedCtx=null; w.remove(); if(c){lastKey=''; load(c.id,c.ep);} };
     if(btns&&btns[1])btns[1].onclick=function(){ embedCtx=null; w.remove(); };
