@@ -530,18 +530,32 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
       return true;
     }catch(e){return false}
   }
+  var fetchTries=0;
+  function fetchData(){
+    if(done)return;
+    fetchTries++;
+    var q='query { Page(page: 1, perPage: 14) { media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { '+FIELDS+' } } }';
+    var p;
+    if(fetchTries>3){
+      p=fetch('https://graphql.anilist.co?query='+encodeURIComponent(q),{headers:{Accept:'application/json'}});
+    }else{
+      p=fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({query:q})});
+    }
+    p.then(function(r){ if(!r.ok)throw new Error('http '+r.status); return r.json(); })
+      .then(function(j){
+        var media=(j&&j.data&&j.data.Page&&j.data.Page.media)||[];
+        if(media.length&&apply(media.map(toKumo))){done=true;return}
+        throw new Error('kosong');
+      })
+      .catch(function(){ if(!done&&fetchTries<12)setTimeout(fetchData,Math.min(2000*fetchTries,10000)); });
+  }
   function attempt(){
     if(done)return;
     tries++;
     var ready=false;
     try{ready=(typeof render==='function')&&!loading}catch(e){}
-    if(!ready){if(tries<25)setTimeout(attempt,600);return}
-    fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'query { Page(page: 1, perPage: 14) { media(type: ANIME, sort: TRENDING_DESC, isAdult: false) { '+FIELDS+' } } }'})})
-      .then(function(r){return r.json()})
-      .then(function(j){
-        var media=(j&&j.data&&j.data.Page&&j.data.Page.media)||[];
-        if(media.length&&apply(media.map(toKumo)))done=true;
-      }).catch(function(){});
+    if(!ready){if(tries<40)setTimeout(attempt,600);return}
+    fetchData();
   }
   setTimeout(attempt,800);
 })();</script>
@@ -554,7 +568,7 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
 // tautan magnet; kunci Real-Debrid diisi pengguna di panel ini dan hanya
 // tersimpan di localStorage perangkatnya sendiri.
 (function(){
-  var lastKey='', closedKey='';
+  var lastKey='', closedKey='', retriedFor='';
   var css='#tspanel{position:absolute;top:60px;left:12px;right:12px;z-index:6;max-height:52%;overflow:auto;background:rgba(18,14,38,.94);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:12px 14px;color:#fff;font-size:13px;box-shadow:0 18px 40px -12px rgba(0,0,0,.6)}'
   +'#tspanel h4{margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}'
   +'#tspanel .tp-x{flex:none;background:rgba(255,255,255,.14);border-radius:99px;width:26px;height:26px;color:#fff;border:0;cursor:pointer}'
@@ -644,7 +658,16 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
           }).join('');
           panel(head(a,ep)+rows); wireRd(id,ep); wirePlay();
         });
-    }).catch(function(){ if(lastKey===key){panel(head(a,ep)+'<div>Sumber video tidak terjangkau. Periksa koneksi internet lalu coba lagi.</div>');wireRd(id,ep);} });
+    }).catch(function(){
+      if(lastKey!==key)return;
+      if(retriedFor!==key){
+        retriedFor=key;
+        panel(head(a,ep)+'<div>Sumber lambat merespons, mencoba lagi\u2026</div>'); wireRd(id,ep);
+        setTimeout(function(){ if(lastKey===key){lastKey=''; load(id,ep);} },3000);
+      }else{
+        panel(head(a,ep)+'<div>Sumber video tidak terjangkau. Periksa koneksi internet lalu coba lagi.</div>'); wireRd(id,ep);
+      }
+    });
   }
   var origPlay=window.play;
   if(typeof origPlay==='function'){
