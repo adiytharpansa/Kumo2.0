@@ -688,25 +688,37 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
     return '<div style="margin-top:9px"><a class="tp-go" target="_blank" rel="noopener" href="'+escT(nyaaUrl(a,ep))+'">Cari magnet di Nyaa</a></div>';
   }
   function fetchStreams(url){
-    return fetch(url)
+    var AC=(typeof window!=='undefined'&&window.AbortController)||null;
+    var ctl=AC?new AC():null, timer=null;
+    if(ctl)timer=setTimeout(function(){try{ctl.abort()}catch(e){}},30000);
+    var opt=ctl?{signal:ctl.signal}:undefined;
+    return fetch(url,opt)
       .then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json()})
       .then(function(j){
         return (j.streams||[]).map(function(s){return {name:s.name||'',title:s.title||'',url:s.url||null,magnet:s.infoHash?('magnet:?xt=urn:btih:'+s.infoHash):null}});
-      });
+      })
+      .then(function(v){if(timer)clearTimeout(timer);return v},
+              function(e){if(timer)clearTimeout(timer);throw e});
   }
-  function fetchFirst(urls){
-    var lastErr=null;
-    var chain=Promise.resolve(null);
-    urls.forEach(function(u){
-      chain=chain.then(function(found){
-        if(found&&found.length)return found;
-        return fetchStreams(u).catch(function(e){lastErr=e;return []});
+  function streamKey(s){return s.url||s.magnet||((s.name||'')+'|'+(s.title||''))}
+  function mergeStreams(a,b){
+    var seen={}, out=[];
+    [a||[],b||[]].forEach(function(list){list.forEach(function(s){
+      var k=streamKey(s); if(seen[k])return; seen[k]=1; out.push(s);
+    })});
+    return out;
+  }
+  function fetchMerged(urls){
+    return Promise.all(urls.map(function(u){
+      return fetchStreams(u).then(function(v){return {ok:true,v:v}},function(e){return {ok:false,e:e}});
+    })).then(function(rs){
+      var out=[], any=false, firstErr=null;
+      rs.forEach(function(r){
+        if(r.ok){any=true;out=mergeStreams(out,r.v)}
+        else if(!firstErr)firstErr=r.e;
       });
-    });
-    return chain.then(function(found){
-      if(found&&found.length)return found;
-      if(lastErr)throw lastErr;
-      return [];
+      if(!any&&firstErr)throw firstErr;
+      return out;
     });
   }
   function load(id,ep){
@@ -723,13 +735,18 @@ applyTheme();render();setTimeout(()=>{loading=false;render()},650);
       var cfg='providers=nyaasi,horriblesubs,anidex|sort=seeders|qualityfilter=720p,1080p';
       var rd=rdKey(); if(rd)cfg+='|realdebrid='+encodeURIComponent(rd);
       var enc=cfg.split('|').join('%7C');
-      var urls=[
+      var primary=[
         'https://torrentio.strem.fun/'+enc+'/stream/anime/kitsu:'+kid+':'+ep+'.json',
+        'https://torrentio.strem.fun/stream/anime/kitsu:'+kid+':'+ep+'.json'
+      ];
+      var secondary=[
         'https://torrentio.strem.fun/'+enc+'/stream/series/kitsu:'+kid+':'+ep+'.json',
-        'https://torrentio.strem.fun/stream/anime/kitsu:'+kid+':'+ep+'.json',
         'https://torrentio.strem.fun/stream/series/kitsu:'+kid+':'+ep+'.json'
       ];
-      return fetchFirst(urls).then(function(streams){
+      return fetchMerged(primary).then(function(streams){
+        if(streams.length>=4)return streams;
+        return fetchMerged(secondary).then(function(extra){return mergeStreams(streams,extra)});
+      }).then(function(streams){
           if(lastKey!==key)return;
           if(!streams.length){
             panel(head(a,ep)+'<div>Torrentio belum menyediakan sumber untuk episode ini. Pakai jalur cadangan Nyaa di bawah ini.</div>'+nyaaBtn(a,ep));
